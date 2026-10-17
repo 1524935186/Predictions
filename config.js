@@ -1,7 +1,7 @@
 // Podium League · site configuration
 // Fill in the two Supabase values from: Supabase dashboard → Project Settings → API.
 window.PL_CONFIG = {
-  SUPABASE_URL: "https://obdpcdrtnfcojcepudkb.supabase.co/rest/v1/",
+  SUPABASE_URL: "https://obdpcdrtnfcojcepudkb.supabase.co",
   SUPABASE_ANON_KEY: "sb_publishable_7mcSb-442uPjds30iE4Ufw_xfhbasJq",
 
   // Shown to new members on the "awaiting approval" screen.
