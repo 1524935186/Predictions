@@ -31,7 +31,7 @@ window.PL_CONFIG = {
     { name: "Kitzbühel week", from: "2027-01-18", to: "2027-01-24",
       vars: { "--slate": "#141414", "--accent": "#D50000", "--accent-ink": "#FFFFFF", "--pale": "#F2F2F4" } },
     { name: "World Championships", from: "2027-02-01", to: "2027-02-14",
-      vars: { "--slate": "#B3122E", "--accent": "#FFFFFF", "--accent-ink": "#B3122E", "--pale": "#FBEDEF" } },
+      vars: { "--slate": "#B3122E", "--accent": "#2F6FE0", "--accent-ink": "#FFFFFF", "--pale": "#FBEDEF" } },
     { name: "Finals", from: "2027-03-15", to: "2027-03-31",
       vars: { "--slate": "#2B3A55", "--accent": "#E3B341", "--accent-ink": "#14213D", "--pale": "#FFF6DD" } }
   ]

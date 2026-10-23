@@ -88,3 +88,11 @@ h2, h3 { font-weight: 800; letter-spacing: 0; }
 .ef-badge.perfect { background: var(--ef-red); }
 .ef-badge.zero { background: #33405A; }
 .toast img { width: 22px; height: 22px; vertical-align: -5px; margin-right: 6px; }
+
+/* Podium reveal for special races (RACE_ART in config.js) */
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal.show { opacity: 1; transform: none; }
+.podium > .reveal .step { transform-origin: bottom; transform: scaleY(0.2); transition: transform 0.6s cubic-bezier(.2,1.4,.4,1); }
+.podium > .reveal.show .step { transform: none; }
+.ef-art { display: block; width: 100%; max-width: 360px; height: auto; border-radius: 12px; }
+@media (prefers-reduced-motion: reduce) { .reveal { opacity: 1; transform: none; transition: none; } .podium > .reveal .step { transform: none; } }

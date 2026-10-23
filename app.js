@@ -60,8 +60,18 @@
   // ---------- EINFÄDLER art ----------
   const EF = "";
   const EF_SCENE = { DH: "downhill", SG: "super-g", GS: "giant-slalom", SL: "slalom", AC: "combined", TDC: "combined", PAR: "parallel", PGS: "parallel", PSL: "parallel" };
-  const efScene = (d) => `${EF}scene-header-${EF_SCENE[d] || "giant-slalom"}.jpg`;
-  const efBanner = (d, page = false) => `<div class="ef-banner${page ? " page" : ""}"><img src="${efScene(d)}" alt=""></div>`;
+  // Venue specials: these weekends get their own art instead of the discipline header.
+  // Matched on race.venue (lower-case, partial) and, if given, the discipline. First match wins.
+  const EF_VENUE = [
+    { match: "kitzb", disc: "SG", art: "scene-venue-kitzbuehel-rooster" },     // Hahnenkamm = rooster's comb
+    { match: "kitzb", disc: "DH", art: "scene-venue-kitzbuehel-mousetrap" },   // the Mausefalle
+    { match: "kitzb", disc: "SL", art: "scene-venue-kitzbuehel-gondola" },     // the cast in a winner's gondola
+    { match: "madonna", art: "scene-hero-night", pos: "60% 85%" },             // night slalom
+    { match: "schladming", art: "scene-hero-night", pos: "60% 85%" },          // night races
+  ];
+  const efVenue = (venue, d) => EF_VENUE.find((x) => (venue || "").toLowerCase().includes(x.match) && (!x.disc || x.disc === d));
+  const efScene = (d, venue) => { const v = efVenue(venue, d); return v ? `${EF}${v.art}.jpg` : `${EF}scene-header-${EF_SCENE[d] || "giant-slalom"}.jpg`; };
+  const efBanner = (d, page = false, venue = "") => { const v = efVenue(venue, d); return `<div class="ef-banner${page ? " page" : ""}"><img src="${efScene(d, venue)}" alt=""${v?.pos ? ` style="object-position:${v.pos}"` : ""}></div>`; };
   const efMoment = (name, small = false) => `<img class="ef-moment${small ? " sm" : ""}" src="${EF}moment-${name}.webp" alt="">`;
   const efIcon = (name) => `<img class="ef-icon" src="${EF}icon-${name}.webp" alt="">`;
   // Your-pick result art: Perfect Score only for the exact podium, Champagne for any other points, Zero Points for 0. Badges always show the real total.
@@ -72,7 +82,9 @@
     return { art: "zero-points", badge: `<span class="ef-badge zero">0</span>` };
   }
   // Double points: a ×2 / ×3 pill wherever a race appears.
-  const efMult = (r) => (r.multiplier > 1 ? ` <span class="pill score" style="padding:2px 8px;font-size:11px">${efIcon("multiplier")}×${r.multiplier}</span>` : "");
+  // The coin has "×2" printed on it, so it stands alone for ×2; ×3 is shown as text.
+  const efMultIcon = (m) => (m === 2 ? efIcon("multiplier") : `<b>×${m}</b>`);
+  const efMult = (r) => (r.multiplier > 1 ? ` <span class="pill score" style="padding:2px 8px;font-size:11px">${efMultIcon(r.multiplier)}</span>` : "");
   const multText = (r) => (r.multiplier > 1 ? `${r.multiplier === 2 ? "Double" : "Triple"} points: everything you score here counts ${r.multiplier === 2 ? "twice" : "three times"}.` : "");
   // Share cards for WhatsApp: the app writes name, race and score onto the template.
   async function efShare(template, { race = "", name = "", score = "" }) {
@@ -167,7 +179,7 @@
 
     view.innerHTML = `
       <section class="card slate">
-        <div class="ef-banner"><img src="scene-hero-night.jpg" alt="" style="object-position:60% 100%"></div>
+        <div class="ef-banner"><img src="scene-cover-day.jpg" alt="" style="object-position:60% 90%"></div>
         <img src="einfaedler-wordmark-dark.svg" alt="${esc(C.LEAGUE_NAME)}" style="height:44px;width:auto;align-self:flex-start">
         <p class="muted">Alpine World Cup ${C.SEASON - 1}/${String(C.SEASON).slice(2)} · podium predictions</p>
       </section>
@@ -177,7 +189,7 @@
         <div class="head">How it works</div>
         <div class="small">Before each World Cup race, pick who finishes 1st, 2nd and 3rd. Picks lock when run 1 starts.</div>
         <div class="small"><b>10</b> for the exact podium · <b>6</b> for the right three in the wrong order · otherwise <b>2</b> per skier in the exact spot and <b>1</b> per skier on the podium elsewhere. Ties count both skiers.</div>
-        <div class="small">Some races are marked ${efIcon("multiplier")}<b>×2</b> or <b>×3</b> by the admins before they lock: everything you score there is multiplied.</div>
+        <div class="small">Some races are marked ${efIcon("multiplier")} or <b>×3</b> by the admins before they lock: everything you score there is multiplied.</div>
         <div class="small">${FREE ? "Each competition has its own leaderboard." : "Each competition has its own buy-in, leaderboard and pot."} World Championships count too.</div>
       </div>
       <form id="comps" style="gap:10px">
@@ -294,7 +306,7 @@
         <a class="card link row" href="#/race/${last.id}">
           <div class="stack"><h3>${esc(last.venue)} · ${esc(last.discipline)} · ${genderName(last.gender)}${efMult(last)}</h3>
           <span class="muted small">${best ? `Best this race: ${best.points} (${esc(best.display_name)})` : "Scored"}</span></div>
-          <span class="ef-result">${mineScore ? efMoment(res.art, true) + res.badge : '<span class="big-score">—</span>'}</span></a>
+          <span class="ef-result">${mineScore ? efMoment(res.art, true) + res.badge : inComp(last.gender) ? efMoment("asleep", true) : '<span class="big-score">—</span>'}</span></a>
         <a href="#/results" class="muted small" style="text-align:right"><b>All past races →</b></a></section>`;
     }
     const counts = await Promise.all(next.map((r) => sb.rpc("pick_count", { r: r.id }).then((x) => x.data ?? null)));
@@ -313,13 +325,14 @@
         return `<section class="section">
           <div class="eyebrow">${first ? "Next race" : "Also open"} · locks in <span data-countdown="${r.start_time_utc || ""}"></span></div>
           <a class="card ${first ? "slate" : ""} link" href="#/race/${r.id}">
-            ${first ? efBanner(r.discipline) : ""}
+            ${first ? efBanner(r.discipline, false, r.venue) : ""}
             <div class="row"><div class="stack">
               <h${first ? 1 : 3}>${esc(r.venue)}${catBadge(r)}</h${first ? 1 : 3}>
               <span class="${first ? "" : "small"}"><b>${discName(r.discipline)} · ${genderName(r.gender)}</b>${efMult(r)}</span>
               <span class="muted small">${fmtDate(r.race_date)} · run 1 at ${fmtTime(r.start_time_utc)}</span>
             </div>
             <span class="pill ${!inComp(r.gender) ? "ghost" : picked ? "accent" : "score"}">${!inComp(r.gender) ? efIcon("locked") + (FREE ? "Not entered" : "Pay to pick") : picked ? efIcon("accepted") + "Pick in ✓" : efIcon("closing-soon") + "No pick yet"}</span></div>
+            ${first && inComp(r.gender) && !picked && r.start_time_utc && new Date(r.start_time_utc) - Date.now() < 3600000 ? `<div class="row divider" style="gap:10px">${efMoment("closing-soon", true)}<b>Closes in under an hour and you haven't picked.</b></div>` : ""}
             ${first ? `<div class="row divider"><span class="muted small">${counts[i] != null ? `${counts[i]} of ${members} have picked` : ""}</span><span class="btn accent sm">${!inComp(r.gender) ? "View race" : picked ? "Change pick" : "Make your pick"}</span></div>` : ""}
           </a></section>`;
       }).join("")}
@@ -345,10 +358,10 @@
       ? `<video class="ef-art" src="${esc(art)}" autoplay muted playsinline loop preload="auto"></video>`
       : `<img class="ef-art" src="${esc(art)}" alt="">`;
     const head = (sub) => `<a href="#/" class="muted small">‹ Races</a>
-      ${efBanner(race.discipline, true)}
+      ${efBanner(race.discipline, true, race.venue)}
       <section class="section"><h1>${esc(race.venue)} · ${discName(race.discipline)}${catBadge(race)}</h1>
       <p class="muted">${genderName(race.gender)} · ${fmtDate(race.race_date)} · ${sub}</p>
-      ${race.multiplier > 1 ? `<p class="small" style="color:var(--score);font-weight:600">${efIcon("multiplier")} ×${race.multiplier} ${race.multiplier === 2 ? "double" : "triple"} points</p>` : ""}</section>`;
+      ${race.multiplier > 1 ? `<p class="small" style="color:var(--score);font-weight:600">${efMultIcon(race.multiplier)} ${race.multiplier === 2 ? "double" : "triple"} points</p>` : ""}</section>`;
 
     if (isOpen(race) && !inComp(race.gender)) {
       const ent = race.gender === "M" ? state.profile.entered_men : state.profile.entered_women;
@@ -413,7 +426,7 @@
     const count = await sb.rpc("pick_count", { r: race.id }).then((x) => x.data);
 
     view.innerHTML = head(`run 1 at ${fmtTime(race.start_time_utc)} · locks in <b data-countdown="${race.start_time_utc || ""}"></b>`) + `
-      ${race.multiplier > 1 ? `<div class="card row" style="border-left:4px solid var(--score)">${efIcon("multiplier")}<b>${multText(race)}</b></div>` : ""}
+      ${race.multiplier > 1 ? `<div class="card row" style="border-left:4px solid var(--score)">${efMultIcon(race.multiplier)}<b>${multText(race)}</b></div>` : ""}
       <p class="muted small">Pick who finishes 1st, 2nd and 3rd. Change it as often as you like until the race starts.${count != null ? ` ${count} of ${state.leaderboard?.length ?? "the"} members have picked.` : ""}</p>
       ${existing ? `<div class="card row">${efMoment("locked-in", true)}<b>Your pick is in. Change it until run 1.</b></div>` : ""}
       ${race.status === "postponed" ? `<div class="card row">${efMoment("weather-hold", true)}<b>Postponed. Picks stay open.</b></div>` : ""}
@@ -544,6 +557,7 @@
   function renderRules() {
     const row = (t, d) => `<div class="stack" style="gap:2px"><b>${t}</b><span class="muted small">${d}</span></div>`;
     return `<section class="section"><div class="eyebrow">${efIcon("podium-pick")} How it works</div>
+      <img src="scene-rules.jpg" alt="" style="display:block;width:100%;height:auto;border-radius:var(--radius-lg)">
       <div class="list">
         <div class="head">Picking</div>
         ${row("Pick the podium", "Before each race, pick who finishes 1st, 2nd and 3rd. Change it as often as you like.")}
@@ -682,6 +696,7 @@
     const efNotice = (art, msg) => { $("#ef-notice")?.remove(); view.insertAdjacentHTML("afterbegin", `<div class="card row" id="ef-notice">${efMoment(art, true)}<b>${msg}</b></div>`); };
     window.addEventListener("offline", () => efNotice("no-signal", "No signal. Showing what we had."));
     window.addEventListener("online", () => { $("#ef-notice")?.remove(); route(); });
+    window.addEventListener("unhandledrejection", () => { if (navigator.onLine) efNotice("something-broke", "Something broke. Pull down to try again."); });
     sb.auth.onAuthStateChange((event, session) => {
       // Defer: calling Supabase from inside this callback can deadlock the auth lock.
       setTimeout(async () => {
