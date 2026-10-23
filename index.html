@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#060B16">
+<title>EINFÄDLER</title>
+<meta name="description" content="World Cup ski predictions. Pick the podium. Beat your mates.">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="einfaedler-theme.css">
+<link rel="icon" type="image/png" sizes="32x32" href="appicon-favicon-32.png">
+<link rel="icon" type="image/png" sizes="48x48" href="appicon-favicon-48.png">
+<link rel="apple-touch-icon" href="appicon-apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest">
+<meta property="og:title" content="EINFÄDLER">
+<meta property="og:description" content="World Cup ski predictions. Pick the podium. Beat your mates.">
+<meta property="og:image" content="https://YOUR-SITE-URL/share-og-image.jpg">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+<body>
+<header class="top" id="top">
+  <div class="top-inner">
+    <a href="#/" class="brand" id="brand"><picture>
+      <source media="(prefers-color-scheme: dark)" srcset="einfaedler-wordmark-dark.svg">
+      <img src="einfaedler-wordmark-light.svg" alt="EINFÄDLER">
+    </picture></a>
+    <div class="who" id="who" hidden>
+      <span class="who-name" id="who-name"></span>
+      <span class="who-rank" id="who-rank"></span>
+    </div>
+  </div>
+</header>
+
+<main id="view" class="view" aria-live="polite"></main>
+
+<nav class="tabs" id="tabs" hidden>
+  <a href="#/" data-tab="home">
+    <img src="icon-races.webp" alt="">
+    Races
+  </a>
+  <a href="#/results" data-tab="results">
+    <img src="icon-final.webp" alt="">
+    Past
+  </a>
+  <a href="#/table" data-tab="table">
+    <img src="icon-standings.webp" alt="">
+    Table
+  </a>
+  <a href="#/me" data-tab="me">
+    <img src="icon-profile.webp" alt="">
+    Me
+  </a>
+  <a href="#/admin" data-tab="admin" id="tab-admin" hidden>
+    <img src="icon-admin.webp" alt="">
+    Admin
+  </a>
+</nav>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
