@@ -74,6 +74,8 @@
   const efBanner = (d, page = false, venue = "") => { const v = efVenue(venue, d); return `<div class="ef-banner${page ? " page" : ""}"><img src="${efScene(d, venue)}" alt=""${v?.pos ? ` style="object-position:${v.pos}"` : ""}></div>`; };
   const efMoment = (name, small = false) => `<img class="ef-moment${small ? " sm" : ""}" src="${EF}moment-${name}.webp" alt="">`;
   const efIcon = (name) => `<img class="ef-icon" src="${EF}icon-${name}.webp" alt="">`;
+  // State card: art on the left, title + muted line on the right (see the state-cards mock).
+  const efState = (art, title, sub = "", extra = "", cls = "") => `<div class="card ef-state ${cls}">${efMoment(art, true)}<div class="stack" style="flex:1"><b>${title}</b>${sub ? `<span class="muted small">${sub}</span>` : ""}${extra}</div></div>`;
   // Your-pick result art: Perfect Score only for the exact podium, Champagne for any other points, Zero Points for 0. Badges always show the real total.
   function efResult(s) {
     if (!s || s.points == null) return { art: "under-review", badge: "" };
@@ -149,13 +151,15 @@
     const hash = location.hash.replace(/^#\/?/, "");
     const [page, arg] = hash.split("/");
     stopCountdowns();
-    if (!state.session) { if (page !== "signup") state.signupStep = 1; return renderAuth(page === "signup" ? "signup" : "signin"); }
+    if (!state.session) { if (page === "rules") { tabs.hidden = true; who.hidden = true; return renderRulesPage(); } if (page !== "signup") state.signupStep = 1; return renderAuth(page === "signup" ? "signup" : "signin"); }
     if (!state.profile || state.profile.status === "banned") return renderPending();
     tabs.hidden = false;
-    document.querySelectorAll(".tabs a").forEach((a) => a.classList.toggle("active", a.dataset.tab === (page === "results" ? "results" : page || "home")));
+    const tab = (page === "results" || page === "races" || page === "race") ? "races" : page === "rules" ? "me" : page || "home";
+    document.querySelectorAll(".tabs a").forEach((a) => a.classList.toggle("active", a.dataset.tab === tab));
     if (page === "race" && arg) return renderRace(arg);
     if (page === "table") return renderTable(arg);
-    if (page === "results") return renderPastRaces();
+    if (page === "results" || page === "races") return renderRaces(arg);
+    if (page === "rules") return renderRulesPage();
     if (page === "me") return renderMe();
     if (page === "member" && arg) return renderMember(arg);
     if (page === "admin") return renderAdmin();
@@ -191,6 +195,7 @@
         <div class="small"><b>10</b> for the exact podium · <b>6</b> for the right three in the wrong order · otherwise <b>2</b> per skier in the exact spot and <b>1</b> per skier on the podium elsewhere. Ties count both skiers.</div>
         <div class="small">Some races are marked ${efIcon("multiplier")} or <b>×3</b> by the admins before they lock: everything you score there is multiplied.</div>
         <div class="small">${FREE ? "Each competition has its own leaderboard." : "Each competition has its own buy-in, leaderboard and pot."} World Championships count too.</div>
+        <a class="small" href="#/rules"><b>Full rules →</b></a>
       </div>
       <form id="comps" style="gap:10px">
         ${compRow("f-men", "Men's World Cup", "Every men's race, Sölden to the Finals")}
@@ -307,7 +312,7 @@
           <div class="stack"><h3>${esc(last.venue)} · ${esc(last.discipline)} · ${genderName(last.gender)}${efMult(last)}</h3>
           <span class="muted small">${best ? `Best this race: ${best.points} (${esc(best.display_name)})` : "Scored"}</span></div>
           <span class="ef-result">${mineScore ? efMoment(res.art, true) + res.badge : inComp(last.gender) ? efMoment("asleep", true) : '<span class="big-score">—</span>'}</span></a>
-        <a href="#/results" class="muted small" style="text-align:right"><b>All past races →</b></a></section>`;
+        <a href="#/races/past" class="muted small" style="text-align:right"><b>All races →</b></a></section>`;
     }
     const counts = await Promise.all(next.map((r) => sb.rpc("pick_count", { r: r.id }).then((x) => x.data ?? null)));
     const members = lb.length;
@@ -332,7 +337,7 @@
               <span class="muted small">${fmtDate(r.race_date)} · run 1 at ${fmtTime(r.start_time_utc)}</span>
             </div>
             <span class="pill ${!inComp(r.gender) ? "ghost" : picked ? "accent" : "score"}">${!inComp(r.gender) ? efIcon("locked") + (FREE ? "Not entered" : "Pay to pick") : picked ? efIcon("accepted") + "Pick in ✓" : efIcon("closing-soon") + "No pick yet"}</span></div>
-            ${first && inComp(r.gender) && !picked && r.start_time_utc && new Date(r.start_time_utc) - Date.now() < 3600000 ? `<div class="row divider" style="gap:10px">${efMoment("closing-soon", true)}<b>Closes in under an hour and you haven't picked.</b></div>` : ""}
+            ${first && inComp(r.gender) && !picked && r.start_time_utc && new Date(r.start_time_utc) - Date.now() < 3600000 ? `<div class="ef-state divider" style="padding-top:12px">${efMoment("closing-soon", true)}<div class="stack"><b>Under an hour to lock.</b><span class="muted small">Get your pick in.</span></div></div>` : ""}
             ${first ? `<div class="row divider"><span class="muted small">${counts[i] != null ? `${counts[i]} of ${members} have picked` : ""}</span><span class="btn accent sm">${!inComp(r.gender) ? "View race" : picked ? "Change pick" : "Make your pick"}</span></div>` : ""}
           </a></section>`;
       }).join("")}
@@ -357,7 +362,7 @@
     const artHtml = !art ? "" : /\.(mp4|webm|mov)$/i.test(art)
       ? `<video class="ef-art" src="${esc(art)}" autoplay muted playsinline loop preload="auto"></video>`
       : `<img class="ef-art" src="${esc(art)}" alt="">`;
-    const head = (sub) => `<a href="#/" class="muted small">‹ Races</a>
+    const head = (sub) => `<a href="#/races" class="muted small">‹ Races</a>
       ${efBanner(race.discipline, true, race.venue)}
       <section class="section"><h1>${esc(race.venue)} · ${discName(race.discipline)}${catBadge(race)}</h1>
       <p class="muted">${genderName(race.gender)} · ${fmtDate(race.race_date)} · ${sub}</p>
@@ -398,7 +403,7 @@
           ${mine.points != null && race.multiplier > 1 ? `<div class="muted small" style="text-align:center">${mine.base_points} × ${race.multiplier} = ${mine.points}</div>` : ""}
           ${[["p1", "v1"], ["p2", "v2"], ["p3", "v3"]].map(([p, v], i) => `<div class="row"><span><span class="muted">${i + 1} </span>${esc(athleteName(mine[p]))}</span><span class="verdict ${mine[v] || ""}">${mine[v] === "exact" ? "exact" : mine[v] === "podium" ? "on podium" : mine[v] === "miss" ? "miss" : ""}</span></div>`).join("")}
           <div class="row divider"><span class="muted tiny">${tierText[mine.tier] || ""}</span>${hasResult && mine.points != null ? '<button class="btn ghost sm" id="ef-share">Share</button>' : ""}</div></section>`
-        : `<div class="card">${efMoment("asleep", true)}<p class="muted">You didn't pick for this race.</p></div>`) +
+        : efState("asleep", "You didn't pick for this race.")) +
       `<section class="section"><div class="eyebrow">Everyone's picks · ${sorted.length}</div><div class="list">
         ${sorted.map((s) => `<a class="row" href="#/member/${s.user_id}" ${s.user_id === state.profile.id ? 'style="background:var(--line)"' : ""}>
           <div class="stack"><b>${esc(s.display_name)}${s.user_id === state.profile.id ? ' <span class="muted" style="font-weight:400">(you)</span>' : ""}</b>
@@ -428,10 +433,10 @@
     view.innerHTML = head(`run 1 at ${fmtTime(race.start_time_utc)} · locks in <b data-countdown="${race.start_time_utc || ""}"></b>`) + `
       ${race.multiplier > 1 ? `<div class="card row" style="border-left:4px solid var(--score)">${efMultIcon(race.multiplier)}<b>${multText(race)}</b></div>` : ""}
       <p class="muted small">Pick who finishes 1st, 2nd and 3rd. Change it as often as you like until the race starts.${count != null ? ` ${count} of ${state.leaderboard?.length ?? "the"} members have picked.` : ""}</p>
-      ${existing ? `<div class="card row">${efMoment("locked-in", true)}<b>Your pick is in. Change it until run 1.</b></div>` : ""}
-      ${race.status === "postponed" ? `<div class="card row">${efMoment("weather-hold", true)}<b>Postponed. Picks stay open.</b></div>` : ""}
+      ${existing ? efState("locked-in", "Your pick is in.", "Change it as often as you like until run 1.") : ""}
+      ${race.status === "postponed" ? efState("weather-hold", "Postponed.", "Picks stay open until the new start time.") : ""}
       <div id="slots" style="display:flex;flex-direction:column;gap:10px"></div>
-      <p class="hint">Names come from ${bibs.size ? "the official FIS start list" : "the World Cup athlete list"}, so your pick always matches the result. Ties count both skiers as correct.</p>
+      <p class="hint">Names come from ${bibs.size ? "the official FIS start list" : "the World Cup athlete list"}, so your pick always matches the result. Ties count both skiers as correct. <a href="#/rules" style="text-decoration:underline">How scoring works</a></p>
       <div class="error" id="pick-err"></div>
       <button class="btn block" id="save" disabled>Save pick</button>
       <p class="center muted tiny">Your pick stays hidden from the group until the race locks.</p>`;
@@ -469,7 +474,7 @@
       const row = { user_id: state.profile.id, race_id: race.id, p1: picks[0], p2: picks[1], p3: picks[2] };
       const { error } = await sb.from("picks").upsert(row, { onConflict: "user_id,race_id" });
       btn.disabled = false;
-      if (error) { $("#pick-err").innerHTML = /row-level security/i.test(error.message) ? efMoment("entries-closed", true) + " Couldn't save: the race may have locked, or your account isn't approved." : esc(error.message); return; }
+      if (error) { $("#pick-err").innerHTML = /row-level security/i.test(error.message) ? efState("entries-closed", "Couldn't save.", "The race may have locked, or your account isn't approved.") : esc(error.message); return; }
       toast("Pick saved"); location.hash = "#/";
     });
     draw();
@@ -492,8 +497,8 @@
         const unit = Number(String(C.BUY_IN).replace(/[^0-9.]/g, "")) || 0;
         const money = (n) => "$" + Math.round(n).toLocaleString();
         const label = { men: "Men's", women: "Women's", combined: "Combined" }[kind];
-        if (FREE) return rows[0]?.user_id === state.profile.id && rows[0][key] > 0 ? `<div class="card slate row">${efMoment("league-leader", true)}<div class="stack"><h3>Top of the table</h3><span class="muted small">${rows[0][key]} points</span></div><button class="btn ghost sm" id="ef-share-lb">Share</button></div>` : "";
-        return `${rows[0]?.user_id === state.profile.id && rows[0][key] > 0 ? `<div class="card slate row">${efMoment("league-leader", true)}<div class="stack"><h3>Top of the table</h3><span class="muted small">${rows[0][key]} points</span></div><button class="btn ghost sm" id="ef-share-lb">Share</button></div>` : ""}
+        if (FREE) return rows[0]?.user_id === state.profile.id && rows[0][key] > 0 ? efState("league-leader", "Top of the table", `${rows[0][key]} points`, '<button class="btn ghost sm" id="ef-share-lb" style="align-self:flex-start;margin-top:6px">Share</button>', "slate") : "";
+        return `${rows[0]?.user_id === state.profile.id && rows[0][key] > 0 ? efState("league-leader", "Top of the table", `${rows[0][key]} points`, '<button class="btn ghost sm" id="ef-share-lb" style="align-self:flex-start;margin-top:6px">Share</button>', "slate") : ""}
         <div class="card slate row"><div class="stack"><span class="eyebrow">${efIcon("standings")} ${label} pot</span><span class="muted small">${rows.length} ${rows.length === 1 ? "entry" : "entries"} × ${esc(C.BUY_IN)}</span></div><span class="num" style="font-size:28px;color:var(--gold)">${money(rows.length * unit)}</span></div>`;
       })()}
       <div class="list">
@@ -508,31 +513,58 @@
     $("#ef-share-lb")?.addEventListener("click", () => efShare("standings-leader", { race: `After ${totalRaces} race${totalRaces === 1 ? "" : "s"} · ${kind}`, name: state.profile.display_name, score: String(rows[0][key]) }));
   }
 
-  async function renderPastRaces() {
+  // ---------- races: everything, with filters ----------
+  const DISC_FILTERS = [["", "All"], ["DH", "DH"], ["SG", "SG"], ["GS", "GS"], ["SL", "SL"], ["AC", "AC"], ["PAR", "Parallel"]];
+  async function renderRaces(when) {
+    const f = state.raceFilter || (state.raceFilter = { when: "upcoming", gender: "", disc: "" });
+    if (["upcoming", "past", "all"].includes(when)) f.when = when;
     view.innerHTML = '<div class="spinner"></div>';
     await loadAthletes();
-    const [races, { data: mine }, { data: results }] = await Promise.all([
+    const [races, { data: mine }, { data: results }, pickRows] = await Promise.all([
       loadRaces(), sb.from("race_scores").select("race_id,points,tier").eq("user_id", state.profile.id),
-      sb.from("results").select("race_id,position,athlete_fis_code").order("position")
+      sb.from("results").select("race_id,position,athlete_fis_code").order("position"),
+      sb.from("picks").select("race_id").eq("user_id", state.profile.id).then((r) => r.data || [])
     ]);
     const myBy = new Map((mine || []).map((m) => [m.race_id, m]));
+    const picked = new Set(pickRows.map((r) => r.race_id));
     const winner = new Map(); for (const r of results || []) if (r.position === 1 && !winner.has(r.race_id)) winner.set(r.race_id, r.athlete_fis_code);
-    const past = races.filter((r) => r.status === "finished" || r.status === "cancelled" || (r.start_time_utc && new Date(r.start_time_utc) <= Date.now())).reverse();
+    const isPast = (r) => r.status === "finished" || r.status === "cancelled" || (r.start_time_utc && new Date(r.start_time_utc) <= Date.now());
+    const discOf = (r) => (/^P/.test(r.discipline) ? "PAR" : r.discipline);
+    let rows = races.filter((r) => f.when === "all" ? true : f.when === "past" ? isPast(r) : !isPast(r));
+    if (f.gender) rows = rows.filter((r) => r.gender === f.gender);
+    if (f.disc) rows = rows.filter((r) => discOf(r) === f.disc);
+    if (f.when !== "upcoming") rows = [...rows].sort((a, b) => new Date(b.start_time_utc || b.race_date) - new Date(a.start_time_utc || a.race_date));
     const total = (mine || []).reduce((t, m) => t + (m.points || 0), 0);
-    view.innerHTML = `<a href="#/" class="muted small">‹ Races</a>
-      <div class="row"><h1>Past races</h1><span class="pill slate">${past.filter((r) => r.status === "finished").length} run</span></div>
-      <div class="grid3">
+    const chip = (key, val, label) => `<button type="button" class="pill ${f[key] === val ? "slate" : "ghost"}" data-f="${key}" data-v="${val}">${label}</button>`;
+
+    view.innerHTML = `<div class="row"><h1>Races</h1><span class="pill slate">${races.filter((r) => r.status === "finished").length} of ${races.filter((r) => r.status !== "cancelled").length} run</span></div>
+      <div class="seg" role="tablist">${[["upcoming", "Upcoming"], ["past", "Past"], ["all", "All"]].map(([k, l]) => `<button role="tab" aria-selected="${f.when === k}" data-f="when" data-v="${k}">${l}</button>`).join("")}</div>
+      <div class="chips">${chip("gender", "", "Men + women")}${chip("gender", "M", "Men")}${chip("gender", "W", "Women")}</div>
+      <div class="chips">${DISC_FILTERS.map(([v, l]) => chip("disc", v, l)).join("")}</div>
+      ${f.when === "past" ? `<div class="grid3">
         <div class="stat"><span class="num">${total}</span><span class="eyebrow">Your points</span></div>
         <div class="stat"><span class="num">${(mine || []).filter((m) => m.points != null).length}</span><span class="eyebrow">Scored</span></div>
         <div class="stat">${(mine || []).some((m) => m.tier === "exact_podium") ? efMoment("perfect-score", true) : ""}<span class="num">${(mine || []).filter((m) => m.tier === "exact_podium").length}</span><span class="eyebrow">Perfect</span></div>
-      </div>
-      <div class="list">${past.map((r) => {
-        const m = myBy.get(r.id), w = winner.get(r.id);
-        const state_ = r.status === "cancelled" ? `<span class="pill ghost">${efIcon("cancelled")}Cancelled</span>` : w ? `<span class="muted tiny">Won by ${esc(lastName(w))}</span>` : `<span class="pill score">${efIcon("provisional")}Result pending</span>`;
-        return `<a class="row" href="#/race/${r.id}"><div class="stack"><b>${esc(r.venue)} · ${esc(r.discipline)} · ${genderName(r.gender)}${catBadge(r)}${efMult(r)}</b><span class="muted tiny">${fmtDate(r.race_date)} · ${state_}</span></div>
-          <span class="num" style="font-size:20px;color:${m?.points != null ? "var(--score)" : "var(--muted)"}">${r.status === "cancelled" ? "" : m ? (m.points ?? "–") : inComp(r.gender) ? "0" : ""}</span></a>`;
-      }).join("") || '<div class="muted">No races have run yet.</div>'}</div>
-      <p class="muted tiny">Tap a race for the podium and everyone's picks. A 0 means you didn't pick.</p>`;
+      </div>` : ""}
+      <div class="list">${rows.map((r) => {
+        const m = myBy.get(r.id), w = winner.get(r.id), past = isPast(r);
+        let state_;
+        if (r.status === "cancelled") state_ = `<span class="pill ghost">${efIcon("cancelled")}Cancelled</span>`;
+        else if (!past) state_ = `<span class="muted tiny">run 1 at ${fmtTime(r.start_time_utc)}</span> ${!inComp(r.gender) ? "" : picked.has(r.id) ? `<span class="pill accent" style="padding:2px 8px;font-size:11px">${efIcon("accepted")}Pick in</span>` : `<span class="pill score" style="padding:2px 8px;font-size:11px">${efIcon("closing-soon")}No pick</span>`}`;
+        else if (w) state_ = `<span class="muted tiny">Won by ${esc(lastName(w))}</span>`;
+        else state_ = `<span class="pill score" style="padding:2px 8px;font-size:11px">${efIcon("provisional")}${r.status === "finished" ? "Result pending" : "Underway"}</span>`;
+        const right = !past || r.status === "cancelled" ? "" : `<span class="num" style="font-size:20px;color:${m?.points != null ? "var(--score)" : "var(--muted)"}">${m ? (m.points ?? "–") : inComp(r.gender) ? "0" : ""}</span>`;
+        return `<a class="row" href="#/race/${r.id}"><div class="stack"><b>${esc(r.venue)} · ${discName(r.discipline)} · ${genderName(r.gender)}${catBadge(r)}${efMult(r)}</b><span class="muted tiny">${fmtDate(r.race_date)} · ${state_}</span></div>${right}</a>`;
+      }).join("") || `<div class="muted" style="padding:16px">${f.when === "past" ? "No races have run yet." : "Nothing matches those filters."}</div>`}</div>
+      <p class="muted tiny">${f.when === "past" ? "Tap a race for the podium and everyone's picks. A 0 means you didn't pick." : "Tap a race to make or change your pick."}</p>`;
+    view.addEventListener("click", (e) => { const b = e.target.closest("[data-f]"); if (!b) return; f[b.dataset.f] = b.dataset.v; renderRaces(); }, { once: true });
+  }
+
+  // ---------- rules, full screen ----------
+  function renderRulesPage() {
+    view.innerHTML = `<a href="#" id="rules-back" class="muted small">‹ Back</a>${renderRules()}`;
+    $("#rules-back").addEventListener("click", (e) => { e.preventDefault(); if (history.length > 1) history.back(); else location.hash = state.session ? "#/me" : "#/signup"; });
+    window.scrollTo(0, 0);
   }
 
   async function renderMember(uid) {
@@ -592,7 +624,7 @@
         ${entries(p).map(([g, ent, paid]) => `<div class="row"><span class="muted">${compName(g)}</span>${paid ? '<span class="pill good">In</span>' : ent ? `<span class="pill warn">${FREE ? "Awaiting approval" : "Awaiting payment"}</span>` : `<button class="btn ghost sm" data-enter="${g}">Enter${FREE ? "" : " · " + esc(C.BUY_IN)}</button>`}</div>`).join("")}</div>
       <form id="name-form"><div class="field"><label for="dn">Display name</label><input class="input" id="dn" value="${esc(p?.display_name || "")}" minlength="2" maxlength="30" required></div><button class="btn ghost" type="submit">Save name</button></form>
       <form id="pw-form"><div class="field"><label for="npw">New password</label><input class="input" id="npw" type="password" minlength="8" required autocomplete="new-password"></div><button class="btn ghost" type="submit">Change password</button></form>
-      ${renderRules()}
+      <a class="btn block" href="#/rules" style="gap:10px">${efIcon("podium-pick")} How it works</a>
       <button class="btn danger block" id="signout">Sign out</button>`;
     if (state.enterClick) view.removeEventListener("click", state.enterClick);
     state.enterClick = async (e) => { const b = e.target.closest("[data-enter]"); if (!b) return; const col = { M: "entered_men", W: "entered_women", C: "entered_combined" }[b.dataset.enter]; const { error } = await sb.from("profiles").update({ [col]: true }).eq("id", p.id); toast(error ? error.message : FREE ? "Entered. An admin will approve you shortly." : `Entered. Pay ${C.PAY_TO} ${C.BUY_IN} to activate.`, !!error); await loadProfile(); renderMe(); };
@@ -693,7 +725,7 @@
     const { data } = await sb.auth.getSession();
     state.session = data.session;
     await loadProfile(); setHeader(); route();
-    const efNotice = (art, msg) => { $("#ef-notice")?.remove(); view.insertAdjacentHTML("afterbegin", `<div class="card row" id="ef-notice">${efMoment(art, true)}<b>${msg}</b></div>`); };
+    const efNotice = (art, msg) => { $("#ef-notice")?.remove(); view.insertAdjacentHTML("afterbegin", efState(art, msg).replace('class="card ef-state', 'id="ef-notice" class="card ef-state')); };
     window.addEventListener("offline", () => efNotice("no-signal", "No signal. Showing what we had."));
     window.addEventListener("online", () => { $("#ef-notice")?.remove(); route(); });
     window.addEventListener("unhandledrejection", () => { if (navigator.onLine) efNotice("something-broke", "Something broke. Pull down to try again."); });
