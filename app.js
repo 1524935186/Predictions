@@ -12,7 +12,7 @@
     setItem: (k, v) => { memory.set(k, v); try { localStorage.setItem(k, v); } catch {} },
     removeItem: (k) => { memory.delete(k); try { localStorage.removeItem(k); } catch {} },
   };
-  const sb = supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY, { auth: { storage: safeStorage } });
+  const sb = supabase.createClient(C.SUPABASE_URL, C.SUPABASE_ANON_KEY, { auth: { storage: safeStorage, persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 
   const $ = (s, el = document) => el.querySelector(s);
   const view = $("#view"), tabs = $("#tabs"), who = $("#who"), whoName = $("#who-name"), whoRank = $("#who-rank");
@@ -190,10 +190,10 @@
       <p class="center muted">Already in? <a href="#/signin"><b>Sign in</b></a></p>` : `
       <h2>${signup ? "Create your account" : "Sign in"}</h2>
       ${signup ? `<div class="row small"><span class="muted">Entering: <b>${["M", "W", "C"].filter((k) => picks[k]).map((k) => compName(k)).join(", ")}</b>${FREE ? "" : ` · ${["M", "W", "C"].filter((k) => picks[k]).length} × ${esc(C.BUY_IN)}`}</span><a href="#" id="back" class="muted"><b>Change</b></a></div>` : ""}
-      <form id="auth">
-        ${signup ? `<div class="field"><label for="f-name">Display name</label><input class="input" id="f-name" required minlength="2" maxlength="30" autocomplete="nickname"><div class="hint">This is what shows on the leaderboard.</div></div>` : ""}
-        <div class="field"><label for="f-email">Email</label><input class="input" id="f-email" type="email" required autocomplete="email"></div>
-        <div class="field"><label for="f-pw">Password</label><input class="input" id="f-pw" type="password" required minlength="8" autocomplete="${signup ? "new-password" : "current-password"}">${signup ? '<div class="hint">At least 8 characters.</div>' : ""}</div>
+      <form id="auth" method="post" action="#">
+        ${signup ? `<div class="field"><label for="f-name">Display name</label><input class="input" id="f-name" name="nickname" required minlength="2" maxlength="30" autocomplete="nickname"><div class="hint">This is what shows on the leaderboard.</div></div>` : ""}
+        <div class="field"><label for="f-email">Email</label><input class="input" id="f-email" name="email" type="email" required autocomplete="${signup ? "email" : "username"}" inputmode="email"></div>
+        <div class="field"><label for="f-pw">Password</label><input class="input" id="f-pw" name="password" type="password" required minlength="8" autocomplete="${signup ? "new-password" : "current-password"}">${signup ? '<div class="hint">At least 8 characters.</div>' : ""}</div>
         <div class="error" id="auth-err"></div>
         <button class="btn block" type="submit" id="auth-btn">${signup ? "Create account" : "Sign in"}</button>
       </form>
