@@ -6,7 +6,8 @@ window.PL_CONFIG = {
 
   // Shown to new members on the "awaiting approval" screen.
   LEAGUE_NAME: "EINFÄDLER",
-  BUY_IN: "$10,000",
+  // Test season: no buy-in. Set BUY_IN back to an amount (e.g. "$10") to turn payments on again.
+  BUY_IN: "Free",
   PAY_TO: "an admin",
   PAY_METHOD: "Ask an admin in the group chat",
   PAY_REFERENCE_HINT: "Use your display name as the reference.",
@@ -21,7 +22,7 @@ window.PL_CONFIG = {
   // Optional: a picture to show at the top of a particular race page instead of the discipline scene.
   // Keyed by the race's FIS id (or the id you gave a test race).
   RACE_ART: {
-    "JOKE-CORTINA": "moment-tiramisu.svg"
+    "JOKE-CORTINA": "moment-tiramisu.webp"
   },
 
   // Optional event skins: between these dates the accent colours change.

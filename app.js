@@ -25,6 +25,7 @@
   const discName = (d) => DISC[d] || d;
   const inComp = (g) => g === "M" ? !!state.profile?.men_paid_at : !!state.profile?.women_paid_at;
   const compName = (g) => g === "M" ? "Men's" : g === "W" ? "Women's" : "Combined";
+  const FREE = !(Number(String(C.BUY_IN).replace(/[^0-9.]/g, "")) > 0);   // no buy-in: everyone who signs up is in
   const entries = (p) => [["M", p?.entered_men, p?.men_paid_at], ["W", p?.entered_women, p?.women_paid_at], ["C", p?.entered_combined, p?.combined_paid_at]];
   const catBadge = (r) => r.category === "WSC" ? ' <span class="pill" style="background:var(--gold);color:#14213D;padding:2px 7px;font-size:11px">Worlds</span>' : "";
   const genderName = (g) => (g === "M" ? "Men" : g === "W" ? "Women" : g);
@@ -162,7 +163,7 @@
     const signup = mode === "signup";
     const step = signup ? (state.signupStep || 1) : 0;
     const picks = state.signupPicks || { M: true, W: true, C: false };
-    const compRow = (id, label, sub) => `<label class="card link" style="flex-direction:row;align-items:center;gap:12px;cursor:pointer"><input type="checkbox" id="${id}" ${picks[id.slice(2).toUpperCase()] ? "checked" : ""} style="width:22px;height:22px;flex-shrink:0"><span class="stack" style="flex-grow:1"><b style="font-size:17px">${label}</b><span class="muted small">${sub}</span></span><span class="pill slate">${esc(C.BUY_IN)}</span></label>`;
+    const compRow = (id, label, sub) => `<label class="card link" style="flex-direction:row;align-items:center;gap:12px;cursor:pointer"><input type="checkbox" id="${id}" ${picks[id.slice(2).toUpperCase()] ? "checked" : ""} style="width:22px;height:22px;flex-shrink:0"><span class="stack" style="flex-grow:1"><b style="font-size:17px">${label}</b><span class="muted small">${sub}</span></span><span class="pill slate">${FREE ? "Free" : esc(C.BUY_IN)}</span></label>`;
 
     view.innerHTML = `
       <section class="card slate">
@@ -177,7 +178,7 @@
         <div class="small">Before each World Cup race, pick who finishes 1st, 2nd and 3rd. Picks lock when run 1 starts.</div>
         <div class="small"><b>10</b> for the exact podium · <b>6</b> for the right three in the wrong order · otherwise <b>2</b> per skier in the exact spot and <b>1</b> per skier on the podium elsewhere. Ties count both skiers.</div>
         <div class="small">Some races are marked ${efIcon("multiplier")}<b>×2</b> or <b>×3</b> by the admins before they lock: everything you score there is multiplied.</div>
-        <div class="small">Each competition has its own buy-in, leaderboard and pot. World Championships count too.</div>
+        <div class="small">${FREE ? "Each competition has its own leaderboard." : "Each competition has its own buy-in, leaderboard and pot."} World Championships count too.</div>
       </div>
       <form id="comps" style="gap:10px">
         ${compRow("f-men", "Men's World Cup", "Every men's race, Sölden to the Finals")}
@@ -188,7 +189,7 @@
       </form>
       <p class="center muted">Already in? <a href="#/signin"><b>Sign in</b></a></p>` : `
       <h2>${signup ? "Create your account" : "Sign in"}</h2>
-      ${signup ? `<div class="row small"><span class="muted">Entering: <b>${["M", "W", "C"].filter((k) => picks[k]).map((k) => compName(k)).join(", ")}</b> · ${["M", "W", "C"].filter((k) => picks[k]).length} × ${esc(C.BUY_IN)}</span><a href="#" id="back" class="muted"><b>Change</b></a></div>` : ""}
+      ${signup ? `<div class="row small"><span class="muted">Entering: <b>${["M", "W", "C"].filter((k) => picks[k]).map((k) => compName(k)).join(", ")}</b>${FREE ? "" : ` · ${["M", "W", "C"].filter((k) => picks[k]).length} × ${esc(C.BUY_IN)}`}</span><a href="#" id="back" class="muted"><b>Change</b></a></div>` : ""}
       <form id="auth">
         ${signup ? `<div class="field"><label for="f-name">Display name</label><input class="input" id="f-name" required minlength="2" maxlength="30" autocomplete="nickname"><div class="hint">This is what shows on the leaderboard.</div></div>` : ""}
         <div class="field"><label for="f-email">Email</label><input class="input" id="f-email" type="email" required autocomplete="email"></div>
@@ -196,7 +197,7 @@
         <div class="error" id="auth-err"></div>
         <button class="btn block" type="submit" id="auth-btn">${signup ? "Create account" : "Sign in"}</button>
       </form>
-      ${signup ? `<div class="card"><p><b>Entry is ${esc(C.BUY_IN)} per competition.</b> After you sign up, pay ${esc(C.PAY_TO)} and each competition is approved as the money arrives. You can't pick until then.</p></div>` : ""}
+      ${signup ? (FREE ? `<div class="card"><p><b>Entry is free.</b> You're in as soon as your account is created.</p></div>` : `<div class="card"><p><b>Entry is ${esc(C.BUY_IN)} per competition.</b> After you sign up, pay ${esc(C.PAY_TO)} and each competition is approved as the money arrives. You can't pick until then.</p></div>`) : ""}
       <p class="center muted">${signup ? 'Already in? <a href="#/signin"><b>Sign in</b></a>' : 'New here? <a href="#/signup"><b>Create an account</b></a>' + (C.PASSWORD_RESET_EMAIL ? ' · <a href="#" id="forgot"><b>Forgot password</b></a>' : "")}</p>
       ${!signup && !C.PASSWORD_RESET_EMAIL ? `<p class="center muted tiny">Forgot your password? Message ${esc(C.PAY_TO)} and we'll reset it.</p>` : ""}`}`;
 
@@ -242,25 +243,25 @@
       <section class="section">
         ${efMoment(banned ? "entries-closed" : "under-review")}
         <span class="pill ${banned ? "danger" : "warn"}">${banned ? "Account closed" : "Awaiting approval"}</span>
-        <h1>${banned ? "This account has been closed." : `You're signed up. Now pay ${esc(C.PAY_TO)}.`}</h1>
-        ${banned ? "" : `<p>Each competition is approved once ${esc(C.PAY_TO)} has its ${esc(C.BUY_IN)}. Then you can start picking.</p>`}
+        <h1>${banned ? "This account has been closed." : FREE ? "You're signed up. Almost in." : `You're signed up. Now pay ${esc(C.PAY_TO)}.`}</h1>
+        ${banned ? "" : FREE ? `<p>An admin just needs to wave you through. Tap "Check again" in a moment.</p>` : `<p>Each competition is approved once ${esc(C.PAY_TO)} has its ${esc(C.BUY_IN)}. Then you can start picking.</p>`}
       </section>
       ${banned ? "" : `<div class="list">
         <div class="head">Your entries</div>
-        ${entries(p).map(([g, ent, paid]) => `<div class="row"><span>${compName(g)}${g === "C" ? "" : " World Cup"}</span>${paid ? '<span class="pill good">Approved</span>' : ent ? '<span class="pill warn">Awaiting payment</span>' : `<button class="btn ghost sm" data-enter="${g}">Enter</button>`}</div>`).join("")}
+        ${entries(p).map(([g, ent, paid]) => `<div class="row"><span>${compName(g)}${g === "C" ? "" : " World Cup"}</span>${paid ? '<span class="pill good">Approved</span>' : ent ? `<span class="pill warn">${FREE ? "Awaiting approval" : "Awaiting payment"}</span>` : `<button class="btn ghost sm" data-enter="${g}">Enter</button>`}</div>`).join("")}
       </div>
-      <div class="list">
+      ${FREE ? "" : `<div class="list">
         <div class="head">How to pay</div>
         <div class="row"><span class="muted">Amount</span><b>${esc(C.BUY_IN)} × ${entries(p).filter(([, ent, paid]) => ent && !paid).length} outstanding</b></div>
         <div class="row"><span class="muted">Method</span><b>${esc(C.PAY_METHOD)}</b></div>
         <div class="row"><span class="muted">Reference</span><b>${esc(p?.display_name || "")}</b></div>
         <div class="muted tiny">${esc(C.PAY_REFERENCE_HINT)}</div>
-      </div>`}
+      </div>`}`}
       <button class="btn ghost block" id="recheck">Check again</button>
       <p class="center muted tiny">Signed in as ${esc(p?.email || state.session.user.email)} · <a href="#" id="signout"><b>Sign out</b></a></p>`;
     $("#recheck").addEventListener("click", async () => { await loadProfile(); setHeader(); route(); if (state.profile?.status !== "approved") toast("Not approved yet."); });
     if (state.enterClick) view.removeEventListener("click", state.enterClick);
-    state.enterClick = async (e) => { const b = e.target.closest("[data-enter]"); if (!b) return; const col = { M: "entered_men", W: "entered_women", C: "entered_combined" }[b.dataset.enter]; const { error } = await sb.from("profiles").update({ [col]: true }).eq("id", p.id); toast(error ? error.message : "Entered. Pay to activate.", !!error); await loadProfile(); route(); };
+    state.enterClick = async (e) => { const b = e.target.closest("[data-enter]"); if (!b) return; const col = { M: "entered_men", W: "entered_women", C: "entered_combined" }[b.dataset.enter]; const { error } = await sb.from("profiles").update({ [col]: true }).eq("id", p.id); toast(error ? error.message : FREE ? "Entered." : "Entered. Pay to activate.", !!error); await loadProfile(); route(); };
     view.addEventListener("click", state.enterClick);
     $("#signout").addEventListener("click", (e) => { e.preventDefault(); sb.auth.signOut(); });
   }
@@ -301,7 +302,7 @@
 
     view.innerHTML = `
       ${state.skin ? `<div class="skin-note">${esc(state.skin.name)}</div>` : ""}
-      ${entries(state.profile).some(([, ent, paid]) => ent && !paid) ? `<a class="card link row" href="#/me" style="border:1.5px solid var(--score)">${efIcon("locked")}<div class="stack"><b>Awaiting payment · ${entries(state.profile).filter(([, ent, paid]) => ent && !paid).map(([g]) => compName(g)).join(", ")}</b><span class="muted small">Pay ${esc(C.PAY_TO)} ${esc(C.BUY_IN)} per competition to unlock picks. ${esc(C.PAY_METHOD)}.</span></div><span class="pill score">Me tab →</span></a>` : ""}
+      ${entries(state.profile).some(([, ent, paid]) => ent && !paid) ? `<a class="card link row" href="#/me" style="border:1.5px solid var(--score)">${efIcon("locked")}<div class="stack"><b>${FREE ? "Awaiting approval" : "Awaiting payment"} · ${entries(state.profile).filter(([, ent, paid]) => ent && !paid).map(([g]) => compName(g)).join(", ")}</b><span class="muted small">${FREE ? "An admin will wave you through shortly." : `Pay ${esc(C.PAY_TO)} ${esc(C.BUY_IN)} per competition to unlock picks. ${esc(C.PAY_METHOD)}.`}</span></div><span class="pill score">Me tab →</span></a>` : ""}
       ${live.length ? `<section class="section"><div class="eyebrow" style="display:flex;align-items:center;gap:6px">${efIcon("live")}Live now</div>
         ${live.map((r) => `<a class="card link row" href="#/race/${r.id}" style="border:1.5px solid var(--score)"><div class="stack"><h3>${esc(r.venue)} · ${discName(r.discipline)} · ${genderName(r.gender)}${catBadge(r)}${efMult(r)}</h3><span class="muted small">Run 1 started ${fmtTime(r.start_time_utc)} · picks locked · result pending</span></div><span class="pill score">Underway</span></a>`).join("")}
       </section>` : ""}
@@ -318,7 +319,7 @@
               <span class="${first ? "" : "small"}"><b>${discName(r.discipline)} · ${genderName(r.gender)}</b>${efMult(r)}</span>
               <span class="muted small">${fmtDate(r.race_date)} · run 1 at ${fmtTime(r.start_time_utc)}</span>
             </div>
-            <span class="pill ${!inComp(r.gender) ? "ghost" : picked ? "accent" : "score"}">${!inComp(r.gender) ? efIcon("locked") + "Pay to pick" : picked ? efIcon("accepted") + "Pick in ✓" : efIcon("closing-soon") + "No pick yet"}</span></div>
+            <span class="pill ${!inComp(r.gender) ? "ghost" : picked ? "accent" : "score"}">${!inComp(r.gender) ? efIcon("locked") + (FREE ? "Not entered" : "Pay to pick") : picked ? efIcon("accepted") + "Pick in ✓" : efIcon("closing-soon") + "No pick yet"}</span></div>
             ${first ? `<div class="row divider"><span class="muted small">${counts[i] != null ? `${counts[i]} of ${members} have picked` : ""}</span><span class="btn accent sm">${!inComp(r.gender) ? "View race" : picked ? "Change pick" : "Make your pick"}</span></div>` : ""}
           </a></section>`;
       }).join("")}
@@ -339,9 +340,12 @@
     const { data: race } = await sb.from("races").select("*").eq("id", id).maybeSingle();
     if (!race) { view.innerHTML = '<p class="muted">Race not found.</p>'; return; }
     await loadAthletes();
-    const art = race.status === "finished" ? (C.RACE_ART || {})[race.fis_race_id] : null;   // custom art only once the result is in
+    const art = race.status === "finished" ? (C.RACE_ART || {})[race.fis_race_id] : null;   // special art/video, shown after the podium reveal
+    const artHtml = !art ? "" : /\.(mp4|webm|mov)$/i.test(art)
+      ? `<video class="ef-art" src="${esc(art)}" autoplay muted playsinline loop preload="auto"></video>`
+      : `<img class="ef-art" src="${esc(art)}" alt="">`;
     const head = (sub) => `<a href="#/" class="muted small">‹ Races</a>
-      ${art ? `<div class="ef-banner page" style="height:auto;background:transparent"><img src="${esc(art)}" alt="" style="position:static;width:100%;height:auto;object-fit:contain"></div>` : efBanner(race.discipline, true)}
+      ${efBanner(race.discipline, true)}
       <section class="section"><h1>${esc(race.venue)} · ${discName(race.discipline)}${catBadge(race)}</h1>
       <p class="muted">${genderName(race.gender)} · ${fmtDate(race.race_date)} · ${sub}</p>
       ${race.multiplier > 1 ? `<p class="small" style="color:var(--score);font-weight:600">${efIcon("multiplier")} ×${race.multiplier} ${race.multiplier === 2 ? "double" : "triple"} points</p>` : ""}</section>`;
@@ -350,7 +354,7 @@
       const ent = race.gender === "M" ? state.profile.entered_men : state.profile.entered_women;
       const count = await sb.rpc("pick_count", { r: race.id }).then((x) => x.data);
       view.innerHTML = head(`run 1 at ${fmtTime(race.start_time_utc)} · locks in <b data-countdown="${race.start_time_utc || ""}"></b>`) +
-        `<div class="card slate">${efIcon("locked")}<h3>${ent ? "Awaiting your payment" : "You're not in this competition"}</h3><p class="muted">${ent ? `Once ${esc(C.PAY_TO)} has your ${esc(C.BUY_IN)} for the ${compName(race.gender).toLowerCase()} competition you can pick here.` : `Add the ${compName(race.gender).toLowerCase()} competition on the Me tab, then pay ${esc(C.BUY_IN)} to pick.`}</p><a class="btn accent sm" href="#/me" style="align-self:flex-start">Me tab</a></div>
+        `<div class="card slate">${efIcon("locked")}<h3>${ent ? (FREE ? "Awaiting approval" : "Awaiting your payment") : "You're not in this competition"}</h3><p class="muted">${ent ? (FREE ? "An admin will wave you through shortly, then you can pick here." : `Once ${esc(C.PAY_TO)} has your ${esc(C.BUY_IN)} for the ${compName(race.gender).toLowerCase()} competition you can pick here.`) : FREE ? `Add the ${compName(race.gender).toLowerCase()} competition on the Me tab to pick.` : `Add the ${compName(race.gender).toLowerCase()} competition on the Me tab, then pay ${esc(C.BUY_IN)} to pick.`}</p><a class="btn accent sm" href="#/me" style="align-self:flex-start">Me tab</a></div>
         <p class="muted small">${count != null ? `${count} members have picked so far.` : ""} Everyone's picks appear here when the race starts.</p>`;
       startCountdowns(); return;
     }
@@ -370,9 +374,10 @@
 
     view.innerHTML = head(hasResult ? "official result" : (race.status === "finished" ? "result pending" : "picks locked")) +
       (hasResult ? `<div class="podium">
-          <div><span class="name">${esc(pos(2))}</span><div class="step s2">2</div></div>
-          <div><span class="name">${esc(pos(1))}</span><div class="step s1">1</div></div>
-          <div><span class="name">${esc(pos(3))}</span><div class="step s3">3</div></div></div>`
+          <div class="${art ? "reveal" : ""}" data-order="2"><span class="name">${esc(pos(2))}</span><div class="step s2">2</div></div>
+          <div class="${art ? "reveal" : ""}" data-order="1"><span class="name">${esc(pos(1))}</span><div class="step s1">1</div></div>
+          <div class="${art ? "reveal" : ""}" data-order="3"><span class="name">${esc(pos(3))}</span><div class="step s3">3</div></div></div>
+          ${art && hasResult ? `<div class="card reveal" id="ef-art-card" style="align-items:center">${artHtml}</div>` : ""}`
         : `<div class="card">${efMoment("under-review")}<p>${race.status === "finished" ? "The race has finished; the official podium will appear here shortly." : "Picks are locked. The result will appear here after the race."}</p></div>`) +
       (mine ? `<section class="card" style="border-left:4px solid var(--accent)">
           <div class="row"><span class="eyebrow">Your pick</span>${res.badge}</div>
@@ -387,6 +392,11 @@
           <span class="muted tiny">${[s.p1, s.p2, s.p3].map(lastName).map(esc).join(" · ")}</span></div>
           <span class="num" style="font-size:22px;color:${s.points != null ? "var(--score)" : "var(--muted)"}">${s.points ?? "–"}</span></a>`).join("") || '<div class="muted">No picks were made.</div>'}
       </div></section>`;
+    if (art && hasResult) {
+      const show = (sel, ms) => setTimeout(() => { const el = view.querySelector(sel); if (el) el.classList.add("show"); }, ms);
+      show('[data-order="3"]', 600); show('[data-order="2"]', 2200); show('[data-order="1"]', 3800);
+      setTimeout(() => { const c = $("#ef-art-card"); if (!c) return; c.classList.add("show"); c.scrollIntoView({ behavior: "smooth", block: "center" }); c.querySelector("video")?.play().catch(() => {}); }, 5200);
+    }
     $("#ef-share")?.addEventListener("click", () => {
       const tpl = mine.tier === "exact_podium" ? "result-perfect" : mine.points > 0 ? "result-points" : "result-zero";
       efShare(tpl, { race: `${race.venue} · ${discName(race.discipline)} · ${genderName(race.gender)}`, name: state.profile.display_name, score: tpl === "result-zero" ? "" : "+" + mine.points });
@@ -469,6 +479,7 @@
         const unit = Number(String(C.BUY_IN).replace(/[^0-9.]/g, "")) || 0;
         const money = (n) => "$" + Math.round(n).toLocaleString();
         const label = { men: "Men's", women: "Women's", combined: "Combined" }[kind];
+        if (FREE) return rows[0]?.user_id === state.profile.id && rows[0][key] > 0 ? `<div class="card slate row">${efMoment("league-leader", true)}<div class="stack"><h3>Top of the table</h3><span class="muted small">${rows[0][key]} points</span></div><button class="btn ghost sm" id="ef-share-lb">Share</button></div>` : "";
         return `${rows[0]?.user_id === state.profile.id && rows[0][key] > 0 ? `<div class="card slate row">${efMoment("league-leader", true)}<div class="stack"><h3>Top of the table</h3><span class="muted small">${rows[0][key]} points</span></div><button class="btn ghost sm" id="ef-share-lb">Share</button></div>` : ""}
         <div class="card slate row"><div class="stack"><span class="eyebrow">${efIcon("standings")} ${label} pot</span><span class="muted small">${rows.length} ${rows.length === 1 ? "entry" : "entries"} × ${esc(C.BUY_IN)}</span></div><span class="num" style="font-size:28px;color:var(--gold)">${money(rows.length * unit)}</span></div>`;
       })()}
@@ -535,12 +546,12 @@
     view.innerHTML = `<h1>${esc(p?.display_name || "You")}</h1>
       <div class="card"><div class="row"><span class="muted">Email</span><b>${esc(p?.email || state.session.user.email)}</b></div>
         <div class="row"><span class="muted">Status</span><span class="pill ${p?.status === "approved" ? "good" : "warn"}">${p?.status === "approved" ? efIcon("accepted") : ""}${esc(p?.status || "pending")}</span></div>
-        ${entries(p).map(([g, ent, paid]) => `<div class="row"><span class="muted">${compName(g)}</span>${paid ? '<span class="pill good">In</span>' : ent ? '<span class="pill warn">Awaiting payment</span>' : `<button class="btn ghost sm" data-enter="${g}">Enter · ${esc(C.BUY_IN)}</button>`}</div>`).join("")}</div>
+        ${entries(p).map(([g, ent, paid]) => `<div class="row"><span class="muted">${compName(g)}</span>${paid ? '<span class="pill good">In</span>' : ent ? `<span class="pill warn">${FREE ? "Awaiting approval" : "Awaiting payment"}</span>` : `<button class="btn ghost sm" data-enter="${g}">Enter${FREE ? "" : " · " + esc(C.BUY_IN)}</button>`}</div>`).join("")}</div>
       <form id="name-form"><div class="field"><label for="dn">Display name</label><input class="input" id="dn" value="${esc(p?.display_name || "")}" minlength="2" maxlength="30" required></div><button class="btn ghost" type="submit">Save name</button></form>
       <form id="pw-form"><div class="field"><label for="npw">New password</label><input class="input" id="npw" type="password" minlength="8" required autocomplete="new-password"></div><button class="btn ghost" type="submit">Change password</button></form>
       <button class="btn danger block" id="signout">Sign out</button>`;
     if (state.enterClick) view.removeEventListener("click", state.enterClick);
-    state.enterClick = async (e) => { const b = e.target.closest("[data-enter]"); if (!b) return; const col = { M: "entered_men", W: "entered_women", C: "entered_combined" }[b.dataset.enter]; const { error } = await sb.from("profiles").update({ [col]: true }).eq("id", p.id); toast(error ? error.message : `Entered. Pay ${C.PAY_TO} ${C.BUY_IN} to activate.`, !!error); await loadProfile(); renderMe(); };
+    state.enterClick = async (e) => { const b = e.target.closest("[data-enter]"); if (!b) return; const col = { M: "entered_men", W: "entered_women", C: "entered_combined" }[b.dataset.enter]; const { error } = await sb.from("profiles").update({ [col]: true }).eq("id", p.id); toast(error ? error.message : FREE ? "Entered. An admin will approve you shortly." : `Entered. Pay ${C.PAY_TO} ${C.BUY_IN} to activate.`, !!error); await loadProfile(); renderMe(); };
     view.addEventListener("click", state.enterClick);
     $("#name-form").addEventListener("submit", async (e) => { e.preventDefault(); const { error } = await sb.from("profiles").update({ display_name: $("#dn").value.trim() }).eq("id", p.id); if (error) return toast(/unique|duplicate/i.test(error.message) ? "That display name is taken." : error.message, true); await loadProfile(); setHeader(); toast("Name saved"); });
     $("#pw-form").addEventListener("submit", async (e) => { e.preventDefault(); const { error } = await sb.auth.updateUser({ password: $("#npw").value }); toast(error ? error.message : "Password changed", !!error); if (!error) $("#npw").value = ""; });
@@ -576,9 +587,9 @@
         <div class="stat"><span class="num" style="color:var(--warn)">${missing.length}</span><span class="eyebrow">${efIcon("closing-soon")}No pick yet</span></div>
       </div>
       <section class="section"><div class="eyebrow">Waiting for approval</div><div class="list" id="pending">
-        ${pending.map((m) => `<div class="row"><div class="stack"><b>${esc(m.display_name)}</b><span class="muted tiny">${m.email ? esc(m.email) + " · " : ""}signed up ${new Date(m.created_at).toLocaleDateString()}</span><span class="small" style="color:var(--score);font-weight:600">Owes ${owes(m).map((g) => compName(g)).join(" + ")} · ${owes(m).length} × ${esc(C.BUY_IN)} = ${"$" + (owes(m).length * (Number(String(C.BUY_IN).replace(/[^0-9.]/g, "")) || 0)).toLocaleString()}</span></div>
+        ${pending.map((m) => `<div class="row"><div class="stack"><b>${esc(m.display_name)}</b><span class="muted tiny">${m.email ? esc(m.email) + " · " : ""}signed up ${new Date(m.created_at).toLocaleDateString()}</span><span class="small" style="color:var(--score);font-weight:600">${FREE ? "Wants in: " : "Owes "}${owes(m).map((g) => compName(g)).join(" + ")}${FREE ? "" : ` · ${owes(m).length} × ${esc(C.BUY_IN)} = ${"$" + (owes(m).length * (Number(String(C.BUY_IN).replace(/[^0-9.]/g, "")) || 0)).toLocaleString()}`}</span></div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end">${owes(m).map((g) => `<button class="btn sm" data-approve="${m.id}" data-comp="${g}">Approve ${compName(g).toLowerCase()}</button>`).join("")}${isAdmin && m.status === "pending" ? `<button class="btn ghost sm" data-ban="${m.id}" aria-label="Decline">✕</button>` : ""}</div></div>`).join("") || '<div class="muted">Nobody waiting.</div>'}
-      </div><div class="hint">Approve a competition once you've received its ${esc(C.BUY_IN)}. The app records that you let them in.</div></section>
+      </div><div class="hint">${FREE ? "Free test season: just approve them." : `Approve a competition once you've received its ${esc(C.BUY_IN)}. The app records that you let them in.`}</div></section>
       ${isAdmin ? `<section class="section"><div class="eyebrow">Settle up · who let in whom</div><div class="list">
         ${(settle || []).map((g) => `<div class="row"><div class="stack"><b>${esc(g.gatekeeper)}</b><span class="muted tiny">Men's: ${(g.men_names || []).map(esc).join(", ") || "–"}</span><span class="muted tiny">Women's: ${(g.women_names || []).map(esc).join(", ") || "–"}</span><span class="muted tiny">Combined: ${(g.combined_names || []).map(esc).join(", ") || "–"}</span></div>
           <div class="stack" style="text-align:right"><span class="num" style="font-size:20px">${g.men_entries + g.women_entries + g.combined_entries}</span><span class="muted tiny">${g.men_entries} M · ${g.women_entries} W · ${g.combined_entries} C · ${esc(C.BUY_IN)} each</span></div></div>`).join("") || '<div class="muted">No gatekeepers yet. Use "Make gatekeeper" on a member below.</div>'}
