@@ -540,6 +540,35 @@
       <div class="list">${(rows || []).map((r) => `<a class="row" href="#/race/${r.race_id}"><div class="stack"><b>${esc(r.venue)} · ${esc(r.discipline)} · ${genderName(r.gender)}</b><span class="muted tiny">${[r.p1, r.p2, r.p3].map(lastName).map(esc).join(" · ")}</span></div><span class="num" style="font-size:20px;color:${r.points != null ? "var(--score)" : "var(--muted)"}">${r.points ?? "–"}</span></a>`).join("") || '<div class="muted">No picks visible yet. Picks show once each race locks.</div>'}</div>`;
   }
 
+  // ---------- rules ----------
+  function renderRules() {
+    const row = (t, d) => `<div class="stack" style="gap:2px"><b>${t}</b><span class="muted small">${d}</span></div>`;
+    return `<section class="section"><div class="eyebrow">${efIcon("podium-pick")} How it works</div>
+      <div class="list">
+        <div class="head">Picking</div>
+        ${row("Pick the podium", "Before each race, pick who finishes 1st, 2nd and 3rd. Change it as often as you like.")}
+        ${row("Picks lock at run 1", "The moment the first run starts, picks close and everyone's picks become visible. Before that, yours are private.")}
+        ${row("Names come from FIS", "The start list once it's published, otherwise the World Cup athlete list, so your pick always matches the result.")}
+        ${row("No pick, no points", "Miss a race and you score 0 for it. There's no catch-up.")}
+      </div>
+      <div class="list">
+        <div class="head">Scoring (highest tier that applies)</div>
+        <div class="row"><span>Exact podium, right order</span><b class="num" style="font-size:20px;color:var(--score)">10</b></div>
+        <div class="row"><span>Right three skiers, wrong order</span><b class="num" style="font-size:20px;color:var(--score)">6</b></div>
+        <div class="row"><span>Otherwise: per skier in the exact spot</span><b class="num" style="font-size:20px;color:var(--score)">2</b></div>
+        <div class="row"><span>… and per skier on the podium, wrong spot</span><b class="num" style="font-size:20px;color:var(--score)">1</b></div>
+        ${row("Ties", "If skiers tie for a place, picking either one counts.")}
+        ${row(`${efIcon("multiplier")} Double points`, "Admins can mark a race ×2 or ×3 before it locks. Everything you score there is multiplied. It can't be changed once the race starts.")}
+      </div>
+      <div class="list">
+        <div class="head">Races and competitions</div>
+        ${row("What counts", "Every World Cup race plus the World Championships. Team events don't count. Cancelled races score nothing.")}
+        ${row("Three competitions", "Men's, Women's, and Combined (your men's + women's points together). Each has its own leaderboard" + (FREE ? "." : " and pot."))}
+        ${row("Results", "Pulled from FIS automatically once the official result is posted. Admins can correct a result if FIS has it wrong.")}
+        ${FREE ? row("Entry", "Free during the test season.") : row("Entry", `${esc(C.BUY_IN)} per competition, paid to ${esc(C.PAY_TO)}. You can browse everything before paying, but can't pick until your entry is approved.`)}
+      </div></section>`;
+  }
+
   // ---------- me ----------
   async function renderMe() {
     const p = state.profile;
@@ -549,6 +578,7 @@
         ${entries(p).map(([g, ent, paid]) => `<div class="row"><span class="muted">${compName(g)}</span>${paid ? '<span class="pill good">In</span>' : ent ? `<span class="pill warn">${FREE ? "Awaiting approval" : "Awaiting payment"}</span>` : `<button class="btn ghost sm" data-enter="${g}">Enter${FREE ? "" : " · " + esc(C.BUY_IN)}</button>`}</div>`).join("")}</div>
       <form id="name-form"><div class="field"><label for="dn">Display name</label><input class="input" id="dn" value="${esc(p?.display_name || "")}" minlength="2" maxlength="30" required></div><button class="btn ghost" type="submit">Save name</button></form>
       <form id="pw-form"><div class="field"><label for="npw">New password</label><input class="input" id="npw" type="password" minlength="8" required autocomplete="new-password"></div><button class="btn ghost" type="submit">Change password</button></form>
+      ${renderRules()}
       <button class="btn danger block" id="signout">Sign out</button>`;
     if (state.enterClick) view.removeEventListener("click", state.enterClick);
     state.enterClick = async (e) => { const b = e.target.closest("[data-enter]"); if (!b) return; const col = { M: "entered_men", W: "entered_women", C: "entered_combined" }[b.dataset.enter]; const { error } = await sb.from("profiles").update({ [col]: true }).eq("id", p.id); toast(error ? error.message : FREE ? "Entered. An admin will approve you shortly." : `Entered. Pay ${C.PAY_TO} ${C.BUY_IN} to activate.`, !!error); await loadProfile(); renderMe(); };
