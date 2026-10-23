@@ -339,7 +339,7 @@
     const { data: race } = await sb.from("races").select("*").eq("id", id).maybeSingle();
     if (!race) { view.innerHTML = '<p class="muted">Race not found.</p>'; return; }
     await loadAthletes();
-    const art = (C.RACE_ART || {})[race.fis_race_id];
+    const art = race.status === "finished" ? (C.RACE_ART || {})[race.fis_race_id] : null;   // custom art only once the result is in
     const head = (sub) => `<a href="#/" class="muted small">‹ Races</a>
       ${art ? `<div class="ef-banner page" style="height:auto;background:transparent"><img src="${esc(art)}" alt="" style="position:static;width:100%;height:auto;object-fit:contain"></div>` : efBanner(race.discipline, true)}
       <section class="section"><h1>${esc(race.venue)} · ${discName(race.discipline)}${catBadge(race)}</h1>
