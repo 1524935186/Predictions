@@ -1,0 +1,90 @@
+/* EINFÄDLER theme for the Predictions app.
+   Re-skins the existing styles.css by overriding its own variables, so no markup changes are needed.
+   Add ONE line to index.html, after the existing styles.css link:
+     <link rel="stylesheet" href="einfaedler-theme.css">
+   Event SKINS in config.js still work: they set --slate / --accent inline, which wins over this file. */
+
+/* Inter (body text) comes from Google Fonts; if it can't load, the system sans is used. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap");
+
+/* Barlow Condensed (headlines, numbers, share cards) is bundled, so the look never depends on a font CDN. SIL OFL, see fonts/OFL.txt. */
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 700; font-display: swap; src: url("font-BarlowCondensed-700Bold.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 800; font-display: swap; src: url("font-BarlowCondensed-800ExtraBold.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-style: italic; font-weight: 700; font-display: swap; src: url("font-BarlowCondensed-700Bold_Italic.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-style: italic; font-weight: 800; font-display: swap; src: url("font-BarlowCondensed-800ExtraBold_Italic.woff2") format("woff2"); }
+@font-face { font-family: "Barlow Condensed"; font-style: italic; font-weight: 900; font-display: swap; src: url("font-BarlowCondensed-900Black_Italic.woff2") format("woff2"); }
+
+:root {
+  /* EINFÄDLER palette */
+  --ef-navy: #060B16;  --ef-piste: #0C1628;  --ef-rule: #1C3560;
+  --ef-snow: #F2F5FA;  --ef-ice: #DCE8F5;    --ef-ink: #0A1222;  --ef-fog: #93A3BC;
+  --ef-red: #E3172B;   --ef-blue: #2F6FE0;   --ef-blue-glow: #3B82FF;
+
+  /* Light mode, mapped onto the app's existing variables */
+  --bg: #F2F5FA;
+  --ink: #0A1222;
+  --muted: #4E5D72;
+  --line: #DCE8F5;
+  --pale: #E6EDF7;
+  --slate: #060B16;          /* the one strong block: now night navy */
+  --slate-ink: #F2F5FA;
+  --slate-muted: #93A3BC;
+  --slate-line: #1C3560;
+  --accent: #2F6FE0;         /* race blue: "you", selected, picked */
+  --accent-ink: #FFFFFF;
+  --score: #E3172B;          /* gate red: points, nudges, live */
+  --font-display: "Barlow Condensed", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #060B16;
+    --ink: #F2F5FA;
+    --muted: #93A3BC;
+    --line: #1C3560;
+    --pale: #0C1628;
+    --slate: #12224A;
+    --slate-line: #2F4A78;
+    --accent: #3B82FF;
+    --accent-ink: #060B16;
+  }
+}
+
+/* Type: Barlow Condensed headlines lean forward like the logo */
+h1, h2, h3, .num, .big-score, .podium .step, .slot .pos, .rank { font-style: italic; }
+h1 { font-weight: 900; text-transform: uppercase; letter-spacing: 0; }
+h2, h3 { font-weight: 800; letter-spacing: 0; }
+
+/* One red action per screen: the main "Make your pick" button */
+.btn.accent { background: var(--ef-red); color: #FFFFFF; }
+
+/* Header wordmark (see ART-KEY.md, "Header") */
+.brand img { display: block; height: 30px; width: auto; }
+
+/* Illustrated tab icons (see ART-KEY.md, "Tab bar") */
+.tabs a img { width: 28px; height: 28px; display: block; }
+.tabs a.active img { filter: drop-shadow(0 0 0 transparent); }
+
+/* Snowflake loader replaces the ring spinner. The existing @keyframes spin and reduced-motion rule are reused. */
+.spinner {
+  width: 40px; height: 40px; border: 0; border-radius: 0;
+  background: url("loader-snowflake-light.svg") center / contain no-repeat;
+  animation-duration: 1.4s;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .spinner { background-image: url("loader-snowflake-dark.svg"); }
+}
+
+/* Art helpers used by the snippets in ART-KEY.md */
+.ef-banner { position: relative; height: 180px; margin: -18px -18px 14px; overflow: hidden; border-radius: var(--radius-lg) var(--radius-lg) 0 0; background: var(--ef-navy); }
+/* Scenes are cropped from the upper-middle so heads stay in shot; the hero overrides this to sit on its bottom edge. */
+.ef-banner img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 60% 30%; }
+.ef-banner.page { margin: 0 0 14px; border-radius: var(--radius-lg); height: 200px; }
+.ef-moment { display: block; width: 100%; max-width: 220px; height: auto; margin: 4px auto 8px; }
+.ef-moment.sm { width: 72px; max-width: 72px; margin: 0; flex-shrink: 0; }
+.ef-result { display: flex; align-items: center; gap: 10px; }
+.ef-icon { width: 24px; height: 24px; vertical-align: -6px; display: inline-block; }
+.ef-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 64px; height: 44px; padding: 0 12px; border-radius: 12px; font-family: var(--font-display); font-style: italic; font-weight: 900; font-size: 30px; color: #FFFFFF; background: var(--ef-blue); }
+.ef-badge.perfect { background: var(--ef-red); }
+.ef-badge.zero { background: #33405A; }
+.toast img { width: 22px; height: 22px; vertical-align: -5px; margin-right: 6px; }
