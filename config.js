@@ -18,6 +18,12 @@ window.PL_CONFIG = {
 
   SEASON: 2027,
 
+  // Optional: a picture to show at the top of a particular race page instead of the discipline scene.
+  // Keyed by the race's FIS id (or the id you gave a test race).
+  RACE_ART: {
+    "JOKE-CORTINA": "moment-tiramisu.svg"
+  },
+
   // Optional event skins: between these dates the accent colours change.
   // Dates are inclusive, local to the viewer.
   SKINS: [

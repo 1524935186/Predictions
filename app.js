@@ -339,8 +339,9 @@
     const { data: race } = await sb.from("races").select("*").eq("id", id).maybeSingle();
     if (!race) { view.innerHTML = '<p class="muted">Race not found.</p>'; return; }
     await loadAthletes();
+    const art = (C.RACE_ART || {})[race.fis_race_id];
     const head = (sub) => `<a href="#/" class="muted small">‹ Races</a>
-      ${efBanner(race.discipline, true)}
+      ${art ? `<div class="ef-banner page" style="height:auto;background:transparent"><img src="${esc(art)}" alt="" style="position:static;width:100%;height:auto;object-fit:contain"></div>` : efBanner(race.discipline, true)}
       <section class="section"><h1>${esc(race.venue)} · ${discName(race.discipline)}${catBadge(race)}</h1>
       <p class="muted">${genderName(race.gender)} · ${fmtDate(race.race_date)} · ${sub}</p>
       ${race.multiplier > 1 ? `<p class="small" style="color:var(--score);font-weight:600">${efIcon("multiplier")} ×${race.multiplier} ${race.multiplier === 2 ? "double" : "triple"} points</p>` : ""}</section>`;
